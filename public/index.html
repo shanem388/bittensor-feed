@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>τ Bittensor News</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; font-size: 14px; }
+    header { background: #111; border-bottom: 1px solid #222; padding: 12px 20px; position: sticky; top: 0; z-index: 100; }
+    .header-content { max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .logo { font-size: 1.1rem; font-weight: 600; color: #00ff88; }
+    .logo span { color: #707070; font-weight: 400; }
+    .meta { font-size: 11px; color: #505050; }
+    .live { color: #00ff88; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .filters { max-width: 900px; margin: 0 auto; padding: 15px 20px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid #1a1a1a; }
+    .filter-btn { background: #1a1a1a; border: 1px solid #333; color: #808080; padding: 4px 10px; border-radius: 3px; font-size: 11px; font-family: inherit; cursor: pointer; text-transform: uppercase; }
+    .filter-btn:hover { border-color: #00ff88; color: #00ff88; }
+    .filter-btn.active { background: rgba(0,255,136,0.1); border-color: #00ff88; color: #00ff88; }
+    main { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .loading { text-align: center; padding: 60px; color: #505050; }
+    .article { display: flex; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #1a1a1a; gap: 12px; }
+    .article:hover { background: rgba(255,255,255,0.02); }
+    .article-num { color: #404040; font-size: 12px; min-width: 28px; text-align: right; }
+    .article-content { flex: 1; }
+    .article-title { color: #e0e0e0; text-decoration: none; line-height: 1.4; }
+    .article-title:hover { color: #00ff88; }
+    .article-source { color: #505050; font-size: 11px; margin-left: 6px; }
+    .article-meta { margin-top: 4px; font-size: 11px; color: #505050; }
+    .article-date { color: #606060; }
+    .article-category { margin-left: 8px; padding: 1px 5px; border-radius: 2px; font-size: 9px; text-transform: uppercase; }
+    .cat-subnet { background: rgba(168,85,247,0.15); color: #a855f7; }
+    .cat-institutional { background: rgba(0,212,255,0.15); color: #00d4ff; }
+    .cat-partnership { background: rgba(236,72,153,0.15); color: #ec4899; }
+    .cat-protocol { background: rgba(0,255,136,0.15); color: #00ff88; }
+    .cat-ecosystem { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .cat-security { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .cat-research { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    footer { max-width: 900px; margin: 0 auto; padding: 20px; border-top: 1px solid #222; font-size: 11px; color: #404040; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div class="logo">τ bittensor <span>news</span></div>
+      <div class="meta"><span class="live">●</span> LIVE • <span id="count">--</span> articles</div>
+    </div>
+  </header>
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="subnet">Subnet</button>
+    <button class="filter-btn" data-filter="institutional">Institutional</button>
+    <button class="filter-btn" data-filter="protocol">Protocol</button>
+    <button class="filter-btn" data-filter="partnership">Partnership</button>
+    <button class="filter-btn" data-filter="research">Research</button>
+    <button class="filter-btn" data-filter="ecosystem">Ecosystem</button>
+  </div>
+  <main id="articles"><div class="loading">Loading...</div></main>
+  <div id="load-more-container" style="max-width: 900px; margin: 0 auto; padding: 20px; text-align: center; display: none;">
+    <button id="load-more-btn" style="background: #1a1a1a; border: 1px solid #00ff88; color: #00ff88; padding: 10px 30px; border-radius: 3px; font-size: 12px; font-family: inherit; cursor: pointer; text-transform: uppercase;">Load More</button>
+  </div>
+  <footer>Sources: SubnetEdge, A Bittensor Journey, Macrocosmos AI, Asymmetric Jump, Tensorplex Labs, BitMind, Greythorn, Opentensor, OAK Research, Subnet Alpha, Taoshi, Hippius, Corcel, Manifold, Dippy, Google News, Cointelegraph, CoinDesk, The Block, DL News, and more</footer>
+  <script>
+    let allArticles = [], currentFilter = 'all', displayCount = 30;
+    async function fetchNews() {
+      try {
+        const res = await fetch('/api/news');
+        const data = await res.json();
+        if (data.success) { allArticles = data.articles; document.getElementById('count').textContent = data.count; renderArticles(); }
+      } catch (err) { document.getElementById('articles').innerHTML = '<div class="loading">Error loading</div>'; }
+    }
+    function renderArticles() {
+      const filtered = currentFilter === 'all' ? allArticles : allArticles.filter(a => a.category === currentFilter);
+      const toShow = filtered.slice(0, displayCount);
+      document.getElementById('articles').innerHTML = toShow.map((a, i) => `
+        <div class="article">
+          <span class="article-num">${i + 1}.</span>
+          <div class="article-content">
+            <a href="${a.url}" target="_blank" class="article-title">${a.title}</a>
+            <span class="article-source">(${a.source})</span>
+            <div class="article-meta">
+              <span class="article-date">${a.dateFormatted}</span>
+              <span class="article-category cat-${a.category}">${a.category}</span>
+            </div>
+          </div>
+        </div>`).join('');
+      
+      // Show/hide Load More button
+      const loadMoreContainer = document.getElementById('load-more-container');
+      if (filtered.length > displayCount) {
+        loadMoreContainer.style.display = 'block';
+      } else {
+        loadMoreContainer.style.display = 'none';
+      }
+    }
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        displayCount = 30;
+        renderArticles();
+      });
+    });
+    document.getElementById('load-more-btn').addEventListener('click', () => {
+      displayCount += 30;
+      renderArticles();
+    });
+    fetchNews();
+    setInterval(fetchNews, 300000);
+  </script>
+</body>
+</html>
